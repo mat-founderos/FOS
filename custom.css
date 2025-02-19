@@ -37,3 +37,18 @@
     transition: all .2s;
     overflow: visible;
 }
+
+fieldset.form-columns-2 {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.hbspt-form form{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.hbspt-form .hs-button{
+    margin-top: 10px;
+}
