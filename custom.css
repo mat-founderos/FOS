@@ -53,3 +53,10 @@ fieldset.form-columns-2 {
     margin-top: 10px;
     cursor: pointer;
 }
+
+@media (max-width: 991px) {
+    fieldset.form-columns-2 {
+        flex-direction: column;
+    }
+}
+  
