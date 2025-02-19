@@ -54,7 +54,7 @@ fieldset.form-columns-2 {
     cursor: pointer;
 }
 
-@media (max-width: 991px) {
+@media (max-width: 479px) {
     fieldset.form-columns-2 {
         flex-direction: column;
     }
