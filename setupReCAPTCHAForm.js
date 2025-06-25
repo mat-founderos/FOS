@@ -1,4 +1,6 @@
-function setupReCAPTCHAForm({ redirectFields = [], siteKey, formSelector, redirectUrl }) {
+function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl = null }) {
+  const siteKey = '6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj'; // fixed globally
+
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll(formSelector).forEach(form => {
       form.addEventListener('submit', e => {
@@ -21,6 +23,12 @@ function setupReCAPTCHAForm({ redirectFields = [], siteKey, formSelector, redire
             }
             input.value = token;
             form.dataset.skipCaptcha = 'true';
+
+            // If redirection is not required, just resubmit the form
+            if (!redirectFields || !redirectUrl) {
+              form.querySelector('[type="submit"]').click();
+              return;
+            }
 
             const wrapper = form.closest('.w-form');
             const observer = new MutationObserver(() => {
