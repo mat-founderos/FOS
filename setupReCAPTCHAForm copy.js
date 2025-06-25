@@ -1,5 +1,7 @@
-function setupReCAPTCHAForm({ redirectFields = [], siteKey, formSelector, redirectUrl }) {
-  document.addEventListener('DOMContentLoaded', () => {
+function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl = null }) {
+  const siteKey = '6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj'; // fixed globally
+
+  function initForms() {
     document.querySelectorAll(formSelector).forEach(form => {
       form.addEventListener('submit', e => {
         if (form.dataset.skipCaptcha === 'true') return;
@@ -7,11 +9,19 @@ function setupReCAPTCHAForm({ redirectFields = [], siteKey, formSelector, redire
         e.preventDefault();
         e.stopPropagation();
 
-        if (!window.grecaptcha) return alert('reCAPTCHA not loaded');
+        if (!window.grecaptcha) {
+          alert('reCAPTCHA not loaded');
+          return;
+        }
 
         grecaptcha.ready(() => {
           grecaptcha.execute(siteKey, { action: 'submit' }).then(token => {
-            if (!token || token.length < 10) return alert('reCAPTCHA failed');
+            token = "";
+            if (!token || token.length < 10) {
+              alert('reCAPTCHA failed');
+              return;
+            }
+
             let input = form.querySelector('textarea[name="g-recaptcha-response"]');
             if (!input) {
               input = document.createElement('textarea');
@@ -22,16 +32,26 @@ function setupReCAPTCHAForm({ redirectFields = [], siteKey, formSelector, redire
             input.value = token;
             form.dataset.skipCaptcha = 'true';
 
+            // If redirection is not required, just resubmit the form
+            if (!redirectFields || !redirectUrl) {
+              form.requestSubmit(); // safer than .click()
+              return;
+            }
+
             const wrapper = form.closest('.w-form');
             const observer = new MutationObserver(() => {
               const done = wrapper.querySelector('.w-form-done');
               if (done && done.offsetParent !== null) {
                 observer.disconnect();
 
+                // Clear skipCaptcha flag after submission
+                delete form.dataset.skipCaptcha;
+
                 const params = new URLSearchParams();
                 redirectFields.forEach(id => {
-                  const val = form.querySelector(`#${id}`)?.value || '';
-                  params.append(id, val);
+                  const el = form.querySelector(`#${id}`);
+                  if (!el) console.warn(`Missing field with id #${id}`);
+                  params.append(id, el?.value || '');
                 });
 
                 window.location.href = `${redirectUrl}?${params}`;
@@ -45,17 +65,20 @@ function setupReCAPTCHAForm({ redirectFields = [], siteKey, formSelector, redire
               attributeFilter: ['style', 'class']
             });
 
-            form.querySelector('[type="submit"]').click();
+            form.requestSubmit(); // safer than .click()
+          }).catch(error => {
+            console.error('reCAPTCHA error:', error);
+            alert('reCAPTCHA error. Please try again.');
           });
         });
       });
     });
-  });
-}
+  }
 
-setupReCAPTCHAForm({
-  redirectFields: ['firstname', 'email', 'phone'],
-  siteKey: '6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj',
-  formSelector: '.workshop-form-hubspot',
-  redirectUrl: '/thank-you/workshop'
-});
+  // Fix #1: Handle case where DOMContentLoaded already fired
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initForms);
+  } else {
+    initForms();
+  }
+}
