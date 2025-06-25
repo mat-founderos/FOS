@@ -1,1 +1,54 @@
-function setupReCAPTCHAForm({redirectFields:e=[],siteKey:t,formSelector:r,redirectUrl:a}){document.addEventListener("DOMContentLoaded",(()=>{document.querySelectorAll(r).forEach((r=>{r.addEventListener("submit",(n=>{if("true"!==r.dataset.skipCaptcha){if(n.preventDefault(),n.stopPropagation(),!window.grecaptcha)return alert("reCAPTCHA not loaded");grecaptcha.ready((()=>{grecaptcha.execute(t,{action:"submit"}).then((t=>{if(!t||t.length<10)return alert("reCAPTCHA failed");let n=r.querySelector('textarea[name="g-recaptcha-response"]');n||(n=document.createElement("textarea"),n.name="g-recaptcha-response",n.style.display="none",r.appendChild(n)),n.value=t,r.dataset.skipCaptcha="true";const c=r.closest(".w-form"),o=new MutationObserver((()=>{const t=c.querySelector(".w-form-done");if(t&&null!==t.offsetParent){o.disconnect();const t=new URLSearchParams;e.forEach((e=>{const a=r.querySelector(`#${e}`)?.value||"";t.append(e,a)})),window.location.href=`${a}?${t}`}}));o.observe(c,{childList:!0,subtree:!0,attributes:!0,attributeFilter:["style","class"]}),r.querySelector('[type="submit"]').click()}))}))}}))}))}))}
+function setupReCAPTCHAForm({ redirectFields = [], siteKey, formSelector, redirectUrl }) {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll(formSelector).forEach(form => {
+      form.addEventListener('submit', e => {
+        if (form.dataset.skipCaptcha === 'true') return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!window.grecaptcha) return alert('reCAPTCHA not loaded');
+
+        grecaptcha.ready(() => {
+          grecaptcha.execute(siteKey, { action: 'submit' }).then(token => {
+            if (!token || token.length < 10) return alert('reCAPTCHA failed');
+            let input = form.querySelector('textarea[name="g-recaptcha-response"]');
+            if (!input) {
+              input = document.createElement('textarea');
+              input.name = 'g-recaptcha-response';
+              input.style.display = 'none';
+              form.appendChild(input);
+            }
+            input.value = token;
+            form.dataset.skipCaptcha = 'true';
+
+            const wrapper = form.closest('.w-form');
+            const observer = new MutationObserver(() => {
+              const done = wrapper.querySelector('.w-form-done');
+              if (done && done.offsetParent !== null) {
+                observer.disconnect();
+
+                const params = new URLSearchParams();
+                redirectFields.forEach(id => {
+                  const val = form.querySelector(`#${id}`)?.value || '';
+                  params.append(id, val);
+                });
+
+                window.location.href = `${redirectUrl}?${params}`;
+              }
+            });
+
+            observer.observe(wrapper, {
+              childList: true,
+              subtree: true,
+              attributes: true,
+              attributeFilter: ['style', 'class']
+            });
+
+            form.querySelector('[type="submit"]').click();
+          });
+        });
+      });
+    });
+  });
+}
