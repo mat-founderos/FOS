@@ -1,1 +1,99 @@
-function setupReCAPTCHAForm({formSelector:e,redirectFields:t=null,redirectUrl:r=null}){function a(){document.querySelectorAll(e).forEach((e=>{e.addEventListener("submit",(a=>{"true"!==e.dataset.skipCaptcha&&(a.preventDefault(),a.stopPropagation(),window.grecaptcha?grecaptcha.ready((()=>{grecaptcha.execute("6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj",{action:"submit"}).then((a=>{if(!a||a.length<10)return void alert("reCAPTCHA failed");let n=e.querySelector('textarea[name="g-recaptcha-response"]');if(n||(n=document.createElement("textarea"),n.name="g-recaptcha-response",n.style.display="none",e.appendChild(n)),n.value=a,e.dataset.skipCaptcha="true",!t||!r)return void e.requestSubmit();const o=e.closest(".w-form"),c=new MutationObserver((()=>{const a=o.querySelector(".w-form-done");if(a&&null!==a.offsetParent){c.disconnect(),delete e.dataset.skipCaptcha;const a=new URLSearchParams;t.forEach((t=>{const r=e.querySelector(`#${t}`);r||console.warn(`Missing field with id #${t}`),a.append(t,r?.value||"")})),window.location.href=`${r}?${a}`}}));c.observe(o,{childList:!0,subtree:!0,attributes:!0,attributeFilter:["style","class"]}),e.requestSubmit()})).catch((e=>{console.error("reCAPTCHA error:",e),alert("reCAPTCHA error. Please try again.")}))})):alert("reCAPTCHA not loaded"))}))}))}"loading"===document.readyState?document.addEventListener("DOMContentLoaded",a):a()}
+function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl = null }) {
+  const siteKey = '6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj'; // your reCAPTCHA v3 site key
+  const verifyEndpoint = 'https://recaptchaverification.netlify.app/.netlify/functions/verify-recaptcha'; // change to your Netlify function URL
+
+  function initForms() {
+    document.querySelectorAll(formSelector).forEach(form => {
+      form.addEventListener('submit', e => {
+        if (form.dataset.skipCaptcha === 'true') return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!window.grecaptcha) {
+          alert('reCAPTCHA not loaded');
+          return;
+        }
+
+        grecaptcha.ready(() => {
+          grecaptcha.execute(siteKey, { action: 'submit' }).then(token => {
+          
+            if (!token || token.length < 10) {
+              alert('reCAPTCHA failed');
+              return;
+            }
+
+            // Call Netlify server function to validate token
+            fetch(verifyEndpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token }),
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (!data.success) {
+                alert('reCAPTCHA verification failed. Please try again.');
+                console.warn('Verification failed:', data);
+                return;
+              }
+
+              // Optional: Add token to form for logging
+              let input = form.querySelector('textarea[name="g-recaptcha-response"]');
+              if (!input) {
+                input = document.createElement('textarea');
+                input.name = 'g-recaptcha-response';
+                input.style.display = 'none';
+                form.appendChild(input);
+              }
+              input.value = token;
+
+              form.dataset.skipCaptcha = 'true';
+
+              if (!redirectFields || !redirectUrl) {
+                form.requestSubmit();
+                return;
+              }
+
+              const wrapper = form.closest('.w-form');
+              const observer = new MutationObserver(() => {
+                const done = wrapper.querySelector('.w-form-done');
+                if (done && done.offsetParent !== null) {
+                  observer.disconnect();
+                  delete form.dataset.skipCaptcha;
+
+                  const params = new URLSearchParams();
+                  redirectFields.forEach(id => {
+                    const el = form.querySelector(`#${id}`);
+                    if (!el) console.warn(`Missing field with id #${id}`);
+                    params.append(id, el?.value || '');
+                  });
+
+                  window.location.href = `${redirectUrl}?${params}`;
+                }
+              });
+
+              observer.observe(wrapper, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style', 'class']
+              });
+
+              form.requestSubmit();
+            })
+            .catch(error => {
+              console.error('Verification error:', error);
+              alert('reCAPTCHA server error. Please try again.');
+            });
+          });
+        });
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initForms);
+  } else {
+    initForms();
+  }
+}

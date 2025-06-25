@@ -16,7 +16,7 @@ function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl =
 
         grecaptcha.ready(() => {
           grecaptcha.execute(siteKey, { action: 'submit' }).then(token => {
-            token = "";
+            
             if (!token || token.length < 10) {
               alert('reCAPTCHA failed');
               return;
