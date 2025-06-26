@@ -1,3 +1,21 @@
+function setupRHFormTracking() {
+  document.querySelectorAll('.form-call').forEach(form => {
+    form.addEventListener('submit', e => {
+      const data = {
+        name: form.querySelector('#firstname')?.value || '',
+        email: form.querySelector('#email')?.value || '',
+        phone_number: form.querySelector('#phone')?.value || '',
+        extra_field: form.querySelector('#user_country_name')?.value || ''
+      };
+
+      if (typeof RH_MFaa41f84dfb !== 'undefined' && RH_MFaa41f84dfb?.form?.submit) {
+        RH_MFaa41f84dfb.form.submit(data);
+      }
+    });
+  });
+}
+
+
 function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl = null }) {
   const siteKey = '6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj';
   const verifyEndpoint = 'https://recaptchaverification.netlify.app/.netlify/functions/verify-recaptcha';
