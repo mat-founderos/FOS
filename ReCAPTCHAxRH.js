@@ -14,7 +14,7 @@ function setupRHFormTracking() {
 }
 
 
-function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl = null }) {
+function setupReCAPTCHAxRHForm({ formSelector, redirectFields = null, redirectUrl = null }) {
   const siteKey = '6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj';
   const verifyEndpoint = 'https://recaptchaverification.netlify.app/.netlify/functions/verify-recaptcha';
 
