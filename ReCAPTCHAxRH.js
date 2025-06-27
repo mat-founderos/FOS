@@ -8,9 +8,7 @@ function setupRHFormTracking() {
         extra_field: form.querySelector('#user_country_name')?.value || ''
       };
 
-      if (typeof RH_MFaa41f84dfb !== 'undefined' && RH_MFaa41f84dfb?.form?.submit) {
-        RH_MFaa41f84dfb.form.submit(data);
-      }
+      RH.pendingReferral(data);
     });
   });
 }
