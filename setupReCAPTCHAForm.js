@@ -1,1 +1,178 @@
-function isSpammyInput(e,t){const o=e.toLowerCase();return("firstname"===t||"lastname"===t)&&e.length>100?"Please keep your response concise.":/([a-z]{3,})\1{2,}/i.test(e.replace(/[^a-z]/gi,""))?"Your response appears to repeat too often.":/[bcdfghjklmnpqrstvwxyz]{6,}/i.test(e)&&!/\s/.test(e)?"Please check your response for missing spaces or typos.":/@(tempmail|mailinator|sharklasers|guerrillamail)/i.test(o)?"Please use a personal or business email, not a temporary one.":/asdf|sdfg|dfgh|fghj|hjkl|qwer|zxcv/i.test(o)?"Please avoid using random key patterns.":/^[0-9]+@/.test(o)?"Please use a valid email address, not one made of only numbers.":null}document.addEventListener("DOMContentLoaded",(function(){const e=document.querySelectorAll("form"),t=document.querySelector(".work-email"),o=Date.now(),n=document.createElement("input");n.type="hidden",n.name="js-check",n.value="valid-js-token",e.forEach((e=>e.appendChild(n)));const a=navigator.userAgent.toLowerCase();if(["curl","python","scrapy","httpclient","wget","node"].some((e=>a.includes(e))))return console.warn("Blocked by User-Agent filter."),void(document.body.innerHTML="");t&&t.addEventListener("input",(function(){t.value.length>0&&document.querySelectorAll('input[type="submit"]').forEach((e=>{e.disabled=!0}))})),e.forEach((e=>{e.addEventListener("submit",(function(t){const n=e.querySelector(".work-email");if(n&&n.value.trim().length>0){t.preventDefault(),t.stopImmediatePropagation(),console.warn("Submission blocked by honeypot.");const o={};return e.querySelectorAll("input, select, textarea").forEach((e=>{const t=e.name||e.id;t&&("checkbox"===e.type?o[t]=e.checked:"radio"===e.type?e.checked&&(o[t]=e.value):o[t]=e.value.trim())})),void fetch("https://founderos.app.n8n.cloud/webhook/spam-logger",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"spam-detected",timestamp:(new Date).toISOString(),formData:o})}).then((()=>{console.info("Partial spam submission sent.")})).catch((e=>{console.error("Failed to send spam data:",e)}))}if((Date.now()-o)/1e3<5)return t.preventDefault(),t.stopImmediatePropagation(),console.warn("Submission blocked: too fast."),void alert("Form submitted too quickly. Please take a moment before submitting.");setTimeout((()=>{document.querySelectorAll("form").forEach((e=>{if(!e.querySelector('input[name="js-check"]')){const t=document.createElement("input");t.type="hidden",t.name="js-check",t.value="valid-js-token",e.appendChild(t)}}))}),500);let a=!1,r="";if(e.querySelectorAll("input:not([type='hidden']), textarea").forEach((e=>{const t=e.name||"";if("cf-turnstile-response"===t)return;if("g-recaptcha-response"===t)return;const o=isSpammyInput(e.value.trim(),t);o&&!a&&(a=!0,r=o)})),a){t.preventDefault(),t.stopImmediatePropagation();const o=e.querySelector(".spam-error-message");o&&o.remove();const n=document.createElement("label");n.className="spam-error-message",n.style.cssText="color: red; display: block; margin-bottom: 10px; font-weight: normal;",n.textContent=r;const a=e.querySelector(".form-disclaimer-checkbox")||e.firstChild;e.insertBefore(n,a)}}),!0)}))}));
+function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl = null }) {
+  const siteKey = '6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj';
+  const verifyEndpoint = 'https://recaptchaverification.netlify.app/.netlify/functions/verify-recaptcha';
+
+  function handleFormSubmit(e, form) {
+    if (form.dataset.skipCaptcha === 'true') return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const hubspotUrl = form.getAttribute('data-webflow-hubspot-api-form-url');
+    form.removeAttribute('data-webflow-hubspot-api-form-url');
+
+    if (!window.grecaptcha) {
+      alert('reCAPTCHA not loaded');
+      return;
+    }
+
+    grecaptcha.ready(() => {
+      grecaptcha.execute(siteKey, { action: 'submit' }).then(token => {
+        if (!token || token.length < 10) {
+          alert('reCAPTCHA failed');
+          return;
+        }
+
+        fetch(verifyEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.success) {
+              alert('reCAPTCHA verification failed. Please try again.');
+              console.warn('Verification failed:', data);
+              return;
+            }
+
+            let input = form.querySelector('textarea[name="g-recaptcha-response"]');
+            if (!input) {
+              input = document.createElement('textarea');
+              input.name = 'g-recaptcha-response';
+              input.style.display = 'none';
+              form.appendChild(input);
+            }
+            input.value = token;
+
+            const submitForm = () => {
+              form.dataset.skipCaptcha = 'true';
+              form.setAttribute('data-webflow-hubspot-api-form-url', hubspotUrl);
+              form.requestSubmit();
+              setTimeout(() => {
+                form.removeAttribute('data-webflow-hubspot-api-form-url');
+              }, 500);
+            };
+
+            if (!redirectFields || !redirectUrl) {
+              submitForm();
+              return;
+            }
+
+            const wrapper = form.closest('.w-form');
+            const observer = new MutationObserver(() => {
+              const done = wrapper.querySelector('.w-form-done');
+              const fail = wrapper.querySelector('.w-form-fail');
+
+              if (done && done.offsetParent !== null) {
+                observer.disconnect();
+                delete form.dataset.skipCaptcha;
+
+                const params = new URLSearchParams();
+                redirectFields.forEach(id => {
+                  const el = form.querySelector(`#${id}`);
+                  if (!el) console.warn(`Missing field with id #${id}`);
+                  params.append(id, el?.value || '');
+                });
+
+                window.location.href = `${redirectUrl}?${params}`;
+              }
+
+              if (fail && fail.offsetParent !== null) {
+                observer.disconnect();
+                delete form.dataset.skipCaptcha;
+              }
+            });
+
+            observer.observe(wrapper, {
+              childList: true,
+              subtree: true,
+              attributes: true,
+              attributeFilter: ['style', 'class']
+            });
+
+            submitForm();
+          })
+          .catch(error => {
+            console.error('Verification error:', error);
+            alert('reCAPTCHA server error. Please try again.');
+          });
+      });
+    });
+  }
+
+  function initForms() {
+   document.querySelectorAll(formSelector).forEach(form => {
+        console.log('FORM SELECTED');
+        const submitBtn = form.querySelector('[type="submit"]');
+        if (!submitBtn) {
+          console.log('No submit button found for form:', form);
+          return;
+        }
+
+        const originalText = submitBtn.value || submitBtn.innerText;
+        const wrapper = form.closest('.w-form');
+
+        console.log('Observing form wrapper:', wrapper);
+
+        const observer = new MutationObserver(() => {
+          const isLoadingRemoved = !wrapper.classList.contains('w-form-loading');
+          console.log('MutationObserver triggered. isLoadingRemoved:', isLoadingRemoved);
+
+          if (isLoadingRemoved) {
+            if (!window.grecaptcha || !grecaptcha.ready) {
+              console.log('grecaptcha not ready. Disabling submit and showing "Loading ReCaptcha"');
+
+              submitBtn.disabled = true;
+              if (submitBtn.tagName === 'INPUT') {
+                submitBtn.value = 'Loading ReCaptcha';
+              } else {
+                submitBtn.innerText = 'Loading ReCaptcha';
+              }
+
+              const waitUntilReady = setInterval(() => {
+                console.log('Waiting for grecaptcha to be ready...');
+                if (window.grecaptcha && grecaptcha.ready) {
+                  grecaptcha.ready(() => {
+                    console.log('grecaptcha is now ready. Re-enabling submit button.');
+                    submitBtn.disabled = false;
+                    if (submitBtn.tagName === 'INPUT') {
+                      submitBtn.value = originalText;
+                    } else {
+                      submitBtn.innerText = originalText;
+                    }
+
+                    clearInterval(waitUntilReady);
+                    observer.disconnect();
+                    console.log('Observer disconnected after grecaptcha ready');
+                  });
+                }
+              }, 100);
+            } else {
+              console.log('grecaptcha already ready. No need to wait.');
+              observer.disconnect();
+              console.log('Observer disconnected immediately');
+            }
+          }
+        });
+
+        observer.observe(wrapper, {
+          attributes: true,
+          attributeFilter: ['class']
+        });
+
+        console.log('Observer started for form');
+
+        form.addEventListener('submit', e => {
+          console.log('Form submitted:', form);
+          handleFormSubmit(e, form);
+        });
+      });
+    }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initForms);
+  } else {
+    initForms();
+  }
+}
