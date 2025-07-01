@@ -103,7 +103,7 @@ function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl =
 
   function initForms() {
    document.querySelectorAll(formSelector).forEach(form => {
-        //console.log('FORM SELECTED');
+        console.log('FORM SELECTED');
         const submitBtn = form.querySelector('[type="submit"]');
         if (!submitBtn) {
           console.log('No submit button found for form:', form);
@@ -113,15 +113,15 @@ function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl =
         const originalText = submitBtn.value || submitBtn.innerText;
         const wrapper = form.closest('.w-form');
 
-       // console.log('Observing form wrapper:', wrapper);
+        console.log('Observing form wrapper:', wrapper);
 
         const observer = new MutationObserver(() => {
           const isLoadingRemoved = !wrapper.classList.contains('w-form-loading');
-         // console.log('MutationObserver triggered. isLoadingRemoved:', isLoadingRemoved);
+          console.log('MutationObserver triggered. isLoadingRemoved:', isLoadingRemoved);
 
           if (isLoadingRemoved) {
             if (!window.grecaptcha || !grecaptcha.ready) {
-            //  console.log('grecaptcha not ready. Disabling submit and showing "Loading ReCaptcha"');
+              console.log('grecaptcha not ready. Disabling submit and showing "Loading ReCaptcha"');
 
               submitBtn.disabled = true;
               if (submitBtn.tagName === 'INPUT') {
@@ -131,10 +131,10 @@ function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl =
               }
 
               const waitUntilReady = setInterval(() => {
-               // console.log('Waiting for grecaptcha to be ready...');
+                console.log('Waiting for grecaptcha to be ready...');
                 if (window.grecaptcha && grecaptcha.ready) {
                   grecaptcha.ready(() => {
-                  //  console.log('grecaptcha is now ready. Re-enabling submit button.');
+                    console.log('grecaptcha is now ready. Re-enabling submit button.');
                     submitBtn.disabled = false;
                     if (submitBtn.tagName === 'INPUT') {
                       submitBtn.value = originalText;
@@ -144,14 +144,14 @@ function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl =
 
                     clearInterval(waitUntilReady);
                     observer.disconnect();
-                  //  console.log('Observer disconnected after grecaptcha ready');
+                    console.log('Observer disconnected after grecaptcha ready');
                   });
                 }
               }, 100);
             } else {
-             // console.log('grecaptcha already ready. No need to wait.');
+              console.log('grecaptcha already ready. No need to wait.');
               observer.disconnect();
-             // console.log('Observer disconnected immediately');
+              console.log('Observer disconnected immediately');
             }
           }
         });
@@ -161,10 +161,10 @@ function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl =
           attributeFilter: ['class']
         });
 
-      //  console.log('Observer started for form');
+        console.log('Observer started for form');
 
         form.addEventListener('submit', e => {
-        //  console.log('Form submitted:', form);
+          console.log('Form submitted:', form);
           handleFormSubmit(e, form);
         });
       });
