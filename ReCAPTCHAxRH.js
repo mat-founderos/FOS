@@ -1,19 +1,3 @@
-function setupRHFormTracking() {
-  document.querySelectorAll('.form-call').forEach(form => {
-    form.addEventListener('submit', e => {
-      const data = {
-        name: form.querySelector('#firstname')?.value || '',
-        email: form.querySelector('#email')?.value || '',
-        phone_number: form.querySelector('#phone')?.value || '',
-        extra_field: form.querySelector('#user_country_name')?.value || ''
-      };
-
-      RH.pendingReferral(data);
-    });
-  });
-}
-
-
 function setupReCAPTCHAxRHForm({ formSelector, redirectFields = null, redirectUrl = null }) {
   const siteKey = '6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj';
   const verifyEndpoint = 'https://recaptchaverification.netlify.app/.netlify/functions/verify-recaptcha';
@@ -64,11 +48,27 @@ function setupReCAPTCHAxRHForm({ formSelector, redirectFields = null, redirectUr
             const submitForm = () => {
               form.dataset.skipCaptcha = 'true';
               form.setAttribute('data-webflow-hubspot-api-form-url', hubspotUrl);
+
+              // ✅ RH.pendingReferral logic added here
+              try {
+                const data = {
+                  name: form.querySelector('#firstname')?.value || '',
+                  email: form.querySelector('#email')?.value || ''
+                };
+                if (window.RH && typeof RH.pendingReferral === 'function') {
+                  RH.pendingReferral(data);
+                }
+              } catch (err) {
+                console.warn('RH.pendingReferral failed:', err);
+              }
+
               form.requestSubmit();
+
               setTimeout(() => {
                 form.removeAttribute('data-webflow-hubspot-api-form-url');
               }, 500);
             };
+
 
             if (!redirectFields || !redirectUrl) {
               submitForm();
@@ -118,10 +118,73 @@ function setupReCAPTCHAxRHForm({ formSelector, redirectFields = null, redirectUr
   }
 
   function initForms() {
-    document.querySelectorAll(formSelector).forEach(form => {
-      form.addEventListener('submit', e => handleFormSubmit(e, form));
-    });
-  }
+   document.querySelectorAll(formSelector).forEach(form => {
+        //console.log('FORM SELECTED');
+        const submitBtn = form.querySelector('[type="submit"]');
+        if (!submitBtn) {
+          console.log('No submit button found for form:', form);
+          return;
+        }
+
+        const originalText = submitBtn.value || submitBtn.innerText;
+        const wrapper = form.closest('.w-form');
+
+       // console.log('Observing form wrapper:', wrapper);
+
+        const observer = new MutationObserver(() => {
+          const isLoadingRemoved = !wrapper.classList.contains('w-form-loading');
+         // console.log('MutationObserver triggered. isLoadingRemoved:', isLoadingRemoved);
+
+          if (isLoadingRemoved) {
+            if (!window.grecaptcha || !grecaptcha.ready) {
+            //  console.log('grecaptcha not ready. Disabling submit and showing "Loading ReCaptcha"');
+
+              submitBtn.disabled = true;
+              if (submitBtn.tagName === 'INPUT') {
+                submitBtn.value = 'Loading ReCaptcha';
+              } else {
+                submitBtn.innerText = 'Loading ReCaptcha';
+              }
+
+              const waitUntilReady = setInterval(() => {
+               // console.log('Waiting for grecaptcha to be ready...');
+                if (window.grecaptcha && grecaptcha.ready) {
+                  grecaptcha.ready(() => {
+                  //  console.log('grecaptcha is now ready. Re-enabling submit button.');
+                    submitBtn.disabled = false;
+                    if (submitBtn.tagName === 'INPUT') {
+                      submitBtn.value = originalText;
+                    } else {
+                      submitBtn.innerText = originalText;
+                    }
+
+                    clearInterval(waitUntilReady);
+                    observer.disconnect();
+                  //  console.log('Observer disconnected after grecaptcha ready');
+                  });
+                }
+              }, 100);
+            } else {
+             // console.log('grecaptcha already ready. No need to wait.');
+              observer.disconnect();
+             // console.log('Observer disconnected immediately');
+            }
+          }
+        });
+
+        observer.observe(wrapper, {
+          attributes: true,
+          attributeFilter: ['class']
+        });
+
+      //  console.log('Observer started for form');
+
+        form.addEventListener('submit', e => {
+        //  console.log('Form submitted:', form);
+          handleFormSubmit(e, form);
+        });
+      });
+    }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initForms);
@@ -129,4 +192,3 @@ function setupReCAPTCHAxRHForm({ formSelector, redirectFields = null, redirectUr
     initForms();
   }
 }
-
