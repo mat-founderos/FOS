@@ -1,4 +1,9 @@
-function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl = null }) {
+function setupReCAPTCHAForm({
+  formSelector,
+  redirectFields = null,
+  redirectUrl = null,
+  delay = 0
+}) {
   const siteKey = '6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj';
   const verifyEndpoint = 'https://recaptchaverification.netlify.app/.netlify/functions/verify-recaptcha';
 
@@ -75,7 +80,16 @@ function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl =
                   params.append(id, el?.value || '');
                 });
 
-                window.location.href = `${redirectUrl}?${params}`;
+                const redirect = () => {
+                  window.location.href = `${redirectUrl}?${params}`;
+                };
+
+                if (delay && Number(delay) > 0) {
+                  setTimeout(redirect, Number(delay));
+                } else {
+                  redirect();
+                }
+
               }
 
               if (fail && fail.offsetParent !== null) {
