@@ -1,9 +1,4 @@
-function setupReCAPTCHAForm({
-  formSelector,
-  redirectFields = null,
-  redirectUrl = null,
-  delay = 0
-}) {
+function setupReCAPTCHAxRHForm({ formSelector, redirectFields = null, redirectUrl = null }) {
   const siteKey = '6LcGI2grAAAAAN9XteKVEWbw1UK_Zle_0PDKpDaj';
   const verifyEndpoint = 'https://recaptchaverification.netlify.app/.netlify/functions/verify-recaptcha';
 
@@ -53,11 +48,27 @@ function setupReCAPTCHAForm({
             const submitForm = () => {
               form.dataset.skipCaptcha = 'true';
               form.setAttribute('data-webflow-hubspot-api-form-url', hubspotUrl);
+
+              // ✅ RH.pendingReferral logic added here
+              try {
+                const data = {
+                  name: form.querySelector('#firstname')?.value || '',
+                  email: form.querySelector('#email')?.value || ''
+                };
+                if (window.RH && typeof RH.pendingReferral === 'function') {
+                  RH.pendingReferral(data);
+                }
+              } catch (err) {
+                console.warn('RH.pendingReferral failed:', err);
+              }
+
               form.requestSubmit();
+
               setTimeout(() => {
                 form.removeAttribute('data-webflow-hubspot-api-form-url');
               }, 500);
             };
+
 
             if (!redirectFields || !redirectUrl) {
               submitForm();
@@ -80,16 +91,7 @@ function setupReCAPTCHAForm({
                   params.append(id, el?.value || '');
                 });
 
-                const redirect = () => {
-                  window.location.href = `${redirectUrl}?${params}`;
-                };
-
-                if (delay && Number(delay) > 0) {
-                  setTimeout(redirect, Number(delay));
-                } else {
-                  redirect();
-                }
-
+                window.location.href = `${redirectUrl}?${params}`;
               }
 
               if (fail && fail.offsetParent !== null) {
