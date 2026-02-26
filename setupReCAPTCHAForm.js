@@ -15,7 +15,6 @@ function setupReCAPTCHAForm({
 
     const hubspotUrl = form.getAttribute('data-webflow-hubspot-api-form-url');
     form.removeAttribute('data-webflow-hubspot-api-form-url');
-    
 
     if (!window.grecaptcha) {
       alert('reCAPTCHA not loaded');
