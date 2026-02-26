@@ -13,27 +13,30 @@ function setupReCAPTCHAForm({ formSelector, redirectFields = null, redirectUrl =
     // 🔴 TEMP: bypass reCAPTCHA but keep full flow
     {
       const submitForm = () => {
-        form.dataset.skipCaptcha = 'true';
-        form.setAttribute('data-webflow-hubspot-api-form-url', hubspotUrl);
+  // ✅ set BEFORE anything else
+  form.dataset.skipCaptcha = 'true';
 
-        try {
-          const data = {
-            name: form.querySelector('#firstname')?.value || '',
-            email: form.querySelector('#email')?.value || ''
-          };
-          if (window.RH && typeof RH.pendingReferral === 'function') {
-            RH.pendingReferral(data);
-          }
-        } catch (err) {
-          console.warn('RH.pendingReferral failed:', err);
-        }
+  form.setAttribute('data-webflow-hubspot-api-form-url', hubspotUrl);
 
-        form.requestSubmit();
+  try {
+    const data = {
+      name: form.querySelector('#firstname')?.value || '',
+      email: form.querySelector('#email')?.value || ''
+    };
+    if (window.RH && typeof RH.pendingReferral === 'function') {
+      RH.pendingReferral(data);
+    }
+  } catch (err) {
+    console.warn('RH.pendingReferral failed:', err);
+  }
 
-        setTimeout(() => {
-          form.removeAttribute('data-webflow-hubspot-api-form-url');
-        }, 500);
-      };
+  // ✅ use native submit instead of requestSubmit
+  form.submit();
+
+  setTimeout(() => {
+    form.removeAttribute('data-webflow-hubspot-api-form-url');
+  }, 500);
+};
 
       if (!redirectFields || !redirectUrl) {
         submitForm();
