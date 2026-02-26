@@ -10,18 +10,77 @@ function setupReCAPTCHAForm({
   function handleFormSubmit(e, form) {
     if (form.dataset.skipCaptcha === 'true') return;
 
-    // TEMP: force skip captcha verification
-    // const bypassCaptcha = true;
-    // if (bypassCaptcha) {
-    //   form.dataset.skipCaptcha = 'true';
-    //   return;
-    // }
-
     e.preventDefault();
     e.stopPropagation();
 
     const hubspotUrl = form.getAttribute('data-webflow-hubspot-api-form-url');
     form.removeAttribute('data-webflow-hubspot-api-form-url');
+
+    // 🔴 TEMP: bypass reCAPTCHA but keep full flow
+    {
+      const submitForm = () => {
+        form.dataset.skipCaptcha = 'true';
+        form.setAttribute('data-webflow-hubspot-api-form-url', hubspotUrl);
+
+        try {
+          const data = {
+            name: form.querySelector('#firstname')?.value || '',
+            email: form.querySelector('#email')?.value || ''
+          };
+          if (window.RH && typeof RH.pendingReferral === 'function') {
+            RH.pendingReferral(data);
+          }
+        } catch (err) {
+          console.warn('RH.pendingReferral failed:', err);
+        }
+
+        form.requestSubmit();
+
+        setTimeout(() => {
+          form.removeAttribute('data-webflow-hubspot-api-form-url');
+        }, 500);
+      };
+
+      if (!redirectFields || !redirectUrl) {
+        submitForm();
+        return;
+      }
+
+      const wrapper = form.closest('.w-form');
+      const observer = new MutationObserver(() => {
+        const done = wrapper.querySelector('.w-form-done');
+        const fail = wrapper.querySelector('.w-form-fail');
+
+        if (done && done.offsetParent !== null) {
+          observer.disconnect();
+          delete form.dataset.skipCaptcha;
+
+          const params = new URLSearchParams();
+          redirectFields.forEach(id => {
+            const el = form.querySelector(`#${id}`);
+            params.append(id, el?.value || '');
+          });
+
+          window.location.href = `${redirectUrl}?${params}`;
+        }
+
+        if (fail && fail.offsetParent !== null) {
+          observer.disconnect();
+          delete form.dataset.skipCaptcha;
+        }
+      });
+
+      observer.observe(wrapper, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+      });
+
+      submitForm();
+      return;
+    }
+    // 🔴 END TEMP BYPASS
 
     if (!window.grecaptcha) {
       alert('reCAPTCHA not loaded');
