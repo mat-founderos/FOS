@@ -3,13 +3,13 @@ function setupReCAPTCHAxRHForm({ formSelector, redirectFields = null, redirectUr
   const verifyEndpoint = 'https://recaptchaverification.netlify.app/.netlify/functions/verify-recaptcha';
 
   function handleFormSubmit(e, form) {
-    //if (form.dataset.skipCaptcha === 'true') return;
+    if (form.dataset.skipCaptcha === 'true') return;
     // TEMP: force skip captcha verification
-    const bypassCaptcha = true;
-    if (bypassCaptcha) {
-      form.dataset.skipCaptcha = 'true';
-      return;
-    }
+    // const bypassCaptcha = true;
+    // if (bypassCaptcha) {
+    //   form.dataset.skipCaptcha = 'true';
+    //   return;
+    // }
 
     e.preventDefault();
     e.stopPropagation();
