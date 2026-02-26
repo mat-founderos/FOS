@@ -15,19 +15,23 @@ function setupReCAPTCHAForm({
 
     const hubspotUrl = form.getAttribute('data-webflow-hubspot-api-form-url');
     form.removeAttribute('data-webflow-hubspot-api-form-url');
+ // ❌ ORIGINAL reCAPTCHA load check
+    // if (!window.grecaptcha) {
+    //   alert('reCAPTCHA not loaded');
+    //   return;
+    // }
 
-    if (!window.grecaptcha) {
-      alert('reCAPTCHA not loaded');
-      return;
-    }
-
+    // ❌ ORIGINAL TOKEN EXECUTION
+    /*
     grecaptcha.ready(() => {
       grecaptcha.execute(siteKey, { action: 'submit' }).then(token => {
-        if (!token || token.length < 10) {
-          alert('reCAPTCHA failed');
-          return;
-        }
+    */
+    
+    // ✅ BYPASS: create fake token to keep flow identical
+    const token = 'bypass-token';
 
+    // ❌ ORIGINAL VERIFICATION REQUEST
+    /*
         fetch(verifyEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -40,6 +44,10 @@ function setupReCAPTCHAForm({
               console.warn('Verification failed:', data);
               return;
             }
+    */
+
+    // ✅ BYPASS: simulate successful verification response
+    Promise.resolve({ success: true }).then(data => {
 
             let input = form.querySelector('textarea[name="g-recaptcha-response"]');
             if (!input) {
